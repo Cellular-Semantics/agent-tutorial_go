@@ -23,7 +23,7 @@ See the [recording on YouTube](https://www.youtube.com/watch?v=Ml0YVjKnZnE)
     * It should be possible to modify examples to use a different model, but we won't covert this in the interests of time
     * Otherwise sign up to get an OpenAI key
 
-Additionally, some knowledge of ontologies like UBERON and the capabilities of the [OAK](https://incatools.github.io/ontology-access-kit/)
+Additionally, some knowledge of ontologies like GO and the capabilities of the [OAK](https://incatools.github.io/ontology-access-kit/)
 will help.
 
 ## Initializing the project
@@ -135,9 +135,9 @@ But this time we will give an agent a *tool*
 
 ```python
 @oak_agent.tool_plain
-async def search_uberon(term: str) -> List[Tuple[str, str]]:
+async def search_go(term: str) -> List[Tuple[str, str]]:
     """
-    Search the UBERON ontology for a term.
+    Search the GO ontology for a term.
 
     Note that search should take into account synonyms, but synonyms may be incomplete,
     so if you cannot find a concept of interest, try searching using related or synonymous
@@ -150,21 +150,21 @@ async def search_uberon(term: str) -> List[Tuple[str, str]]:
         term: The term to search for.
 
     Returns:
-        A list of tuples, each containing an UBERON ID and a label.
+        A list of tuples, each containing an GO ID and a label.
     """
-    adapter = get_adapter("ols:uberon")
+    adapter = get_adapter("ols:go")
     results = adapter.basic_search(term)
     labels = list(adapter.labels(results))
     print(f"## Query: {term} -> {labels}")
     return labels
 ```
 
-Here we are using the OAK OLS adapter, configured to query [Uberon on OLS](https://www.ebi.ac.uk/ols4/ontologies/uberon)
+Here we are using the OAK OLS adapter, configured to query [Uberon on OLS](https://www.ebi.ac.uk/ols4/ontologies/go)
 
 We can test this with
 
 ```python
-query = "What is the UBERON ID for the CNS?"
+query = "What is the GO ID for the CNS?"
 result = oak_agent.run_sync(query)
 ```
 
@@ -185,12 +185,12 @@ We will create a bespoke data model for this agent:
 ```python
 class TextAnnotation(BaseModel):
     """
-    A text annotation is a span of text and the UBERON ID and label for the anatomical structure it mentions.
-    Use `text` for the source text, and `uberon_id` and `uberon_label` for the UBERON ID and label of the anatomical structure in the ontology.
+    A text annotation is a span of text and the GO ID and label for the anatomical structure it mentions.
+    Use `text` for the source text, and `go_id` and `go_label` for the GO ID and label of the anatomical structure in the ontology.
     """
     text: str
-    uberon_id: Optional[str] = None
-    uberon_label: Optional[str] = None
+    go_id: Optional[str] = None
+    go_label: Optional[str] = None
 
 class TextAnnotationResult(BaseModel):
     annotations: List[TextAnnotation]
@@ -202,15 +202,15 @@ Now we'll create an agent:
 annotator_agent = Agent(  
     'claude-3-7-sonnet-latest',
     system_prompt="""
-    Extract all uberon terms from the text. Return the as a list of annotations.
+    Extract all go terms from the text. Return the as a list of annotations.
     Be sure to include all spans mentioning anatomical structures; if you cannot
-    find a UBERON ID, then you should still return a TextAnnotation, just leave
-    the uberon_id field empty.
+    find a GO ID, then you should still return a TextAnnotation, just leave
+    the go_id field empty.
 
     However, before giving up you should be sure to try different combinations of
-    synonyms with the `search_uberon` tool.
+    synonyms with the `search_go` tool.
     """,
-    tools=[search_uberon],
+    tools=[search_go],
     result_type=TextAnnotationResult,  
 )
 ```

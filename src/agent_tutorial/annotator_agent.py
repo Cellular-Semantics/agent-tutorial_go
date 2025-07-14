@@ -2,17 +2,18 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 from typing import List, Optional
 import click
+import sys
 from oaklib import get_adapter
-from agent_tutorial.oak_agent import search_uberon
+from agent_tutorial.oak_agent import search_go
 
 class TextAnnotation(BaseModel):
     """
-    A text annotation is a span of text and the UBERON ID and label for the anatomical structure it mentions.
-    Use `text` for the source text, and `uberon_id` and `uberon_label` for the UBERON ID and label of the anatomical structure in the ontology.
+    A text annotation is a span of text and the GO ID and label for the biological processes or cellular component it mentions.
+    Use `text` for the source text, and `go_id` and `go_label` for the GO ID and label of the anatomical structure in the ontology.
     """
     text: str
-    uberon_id: Optional[str] = None
-    uberon_label: Optional[str] = None
+    go_id: Optional[str] = None
+    go_label: Optional[str] = None
 
 class TextAnnotationResult(BaseModel):
     annotations: List[TextAnnotation]
@@ -21,27 +22,36 @@ annotator_agent = Agent(
     #'claude-3-7-sonnet-latest',
     'openai:gpt-4o',
     system_prompt="""
-    Extract all uberon terms from the text. Return the as a list of annotations.
-    Be sure to include all spans mentioning anatomical structures; if you cannot
-    find a UBERON ID, then you should still return a TextAnnotation, just leave
-    the uberon_id field empty.
+    Extract all go terms from the text. Return the as a list of annotations.
+    Be sure to include all spans mentioning biological processes or cellular components; if you cannot
+    find a GO ID, then you should still return a TextAnnotation, just leave
+    the go_id field empty.
 
     However, before giving up you should be sure to try different combinations of
-    synonyms with the `search_uberon` tool.
+    synonyms with the `search_go` tool.
+    When searching for synonyms, try substituting individual words or phrases in the span
+    for synonymous words or phrases, e.g. you might substitute regulation for control.
     """,
-    tools=[search_uberon],
+    tools=[search_go],
     result_type=TextAnnotationResult,  
 )
-DEFAULT_TEXT = 'The (hippocampal) CA1 is located in the forebrain, it projects to the amygdala, subiculum, and the entorhinal cortex'
+DEFAULT_TEXT = ''
 
 @click.command()
-@click.argument('text', default=DEFAULT_TEXT)
-def main(text: str):
-    """Run the annotator agent on the given text."""
+@click.argument('text', required=False)
+def main(text: str = None):
+    """Run the annotator agent on the given text or from STDIN."""
+    if text is None:
+        text = sys.stdin.read().strip()
+    
+    if not text:
+        click.echo("Error: No text provided via argument or STDIN", err=True)
+        sys.exit(1)
+    
     result = annotator_agent.run_sync(text)
     print("## Result:")
-    for a in result.data.annotations:
-        print(f"  {a.text} ==> {a.uberon_id} {a.uberon_label}")
+    for a in result.output.annotations:
+        print(f"  {a.text} ==> {a.go_id} {a.go_label}")
 
 if __name__ == "__main__":
     main()

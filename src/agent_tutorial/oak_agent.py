@@ -13,9 +13,9 @@ oak_agent = Agent(
 )
 
 @oak_agent.tool_plain
-def search_uberon(term: str) -> List[Tuple[str, str]]:
+def search_go(term: str) -> List[Tuple[str, str]]:
     """
-    Search the UBERON ontology for a term.
+    Search the GO ontology for a term.
 
     Note that search should take into account synonyms, but synonyms may be incomplete,
     so if you cannot find a concept of interest, try searching using related or synonymous
@@ -28,9 +28,9 @@ def search_uberon(term: str) -> List[Tuple[str, str]]:
         term: The term to search for.
 
     Returns:
-        A list of tuples, each containing an UBERON ID and a label.
+        A list of tuples, each containing an GO ID and a label.
     """
-    adapter = get_adapter("ols:uberon")
+    adapter = get_adapter("ols:go")
     results = adapter.basic_search(term)
     labels = list(adapter.labels(results))
     print(f"## Query: {term} -> {labels}")
@@ -38,7 +38,7 @@ def search_uberon(term: str) -> List[Tuple[str, str]]:
 
 
 @click.command()
-@click.argument('query', default='What is the UBERON ID for the CNS?')
+@click.argument('query', default='CTSH is involved in surfactant homeostasis')
 def main(query: str):
     """Run the oak agent with the given query."""
     result = oak_agent.run_sync(query)
